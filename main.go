@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -9,9 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
-	"gopkg.in/yaml.v2"
+	"github.com/debanjanc01/letter/utils"
 )
 
 type Collection struct {
@@ -26,56 +24,6 @@ type Collection struct {
 
 type Collections struct {
 	Collections []Collection
-}
-
-type Config struct {
-	APIKey      string `yaml:"apikey"`
-	WorkspaceID string `yaml:"workspaceid"`
-}
-
-func readConfig(filename string) (*Config, error) {
-	// Read the YAML file
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	// Unmarshal the YAML data into the Config struct
-	config := &Config{}
-	if err := yaml.Unmarshal(data, config); err != nil {
-		return nil, err
-	}
-
-	return config, nil
-}
-
-func mainn() {
-	// Get the current running path
-	binaryDir, err := getCurrRunningPath()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-
-	// Define the file path you want to check
-	configFilePath := filepath.Join(binaryDir, ".letter.config")
-
-	// Check if the file exists
-	_, err = os.Stat(configFilePath)
-	if err == nil {
-		fmt.Println(".letter.config exists in", binaryDir)
-	} else if os.IsNotExist(err) {
-		fmt.Println(".letter.config does not exist in", binaryDir)
-		// Create the file if it doesn't exist
-		err = createConfigFile(configFilePath)
-		if err != nil {
-			fmt.Println("Error creating .letter.config:", err)
-		} else {
-			fmt.Println(".letter.config created in", binaryDir)
-		}
-	} else {
-		fmt.Println("Error checking .letter.config:", err)
-	}
 }
 
 func getCurrRunningPath() (string, error) {
@@ -94,53 +42,20 @@ func main() {
 		fmt.Println("Unable to get the current running path")
 		return
 	}
-
-	fmt.Println(path)
-}
-
-func createConfigFile(filePath string, content string) error {
-	file, err := os.Create(filePath)
+	config, err := utils.GetConfigValues(path)
 	if err != nil {
-		return err
+		fmt.Println("Could not get the config values. Goodbye")
+		return
 	}
-	defer file.Close()
-
-	_, err = file.WriteString(content)
-	return err
-}
-
-func getUserInput() (string, string, error) {
-	scanner := bufio.NewScanner(os.Stdin)
-
-	fmt.Print("Enter your API key: ")
-	scanner.Scan()
-	apikey := scanner.Text()
-
-	if scanner.Err() != nil {
-		return "", "", scanner.Err()
-	}
-
-	fmt.Print("Enter your workspace ID: ")
-	scanner.Scan()
-	workspaceid := scanner.Text()
-
-	if scanner.Err() != nil {
-		return "", "", scanner.Err()
-	}
-
-	return apikey, workspaceid, nil
-}
-
-func main1() {
-	apikey := "your api key"
-	workspaceid := "your workspace id"
+	apikey := config.APIKey
+	workspaceid := config.WorkspaceID
 	currentDir, err := os.Getwd()
 	if err != nil {
 		fmt.Println("Error:", err)
 		return
 	}
 
-	files, err := listFilesWithFullPath(currentDir)
+	files, err := utils.ListFilesWithFullPath(currentDir)
 	if err != nil {
 		fmt.Println("Error in reading files from current dir", currentDir, err)
 		return
@@ -152,7 +67,6 @@ func main1() {
 	}
 
 	for _, file := range files {
-		// Read the JSON file
 		jsonData, err := os.ReadFile(file)
 		if err != nil {
 			fmt.Println("Error reading the JSON file:", err)
@@ -234,30 +148,7 @@ func main1() {
 		} else {
 			fmt.Println("The value is not a string")
 		}
-
 	}
-
-	fmt.Println(files)
-}
-
-func listFilesWithFullPath(directoryPath string) ([]string, error) {
-	files := make([]string, 0)
-
-	fileInfos, err := os.ReadDir(directoryPath)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, fileInfo := range fileInfos {
-		if fileInfo.IsDir() {
-			continue // Skip directories
-		}
-		if strings.HasSuffix(fileInfo.Name(), "postman_collection.json") {
-			files = append(files, filepath.Join(directoryPath, fileInfo.Name()))
-		}
-	}
-
-	return files, nil
 }
 
 func getCurrentCollections(apikey string, workspaceid string) (map[string]Collection, error) {
@@ -271,7 +162,6 @@ func getCurrentCollections(apikey string, workspaceid string) (map[string]Collec
 
 	collections := new(Collections)
 	json.NewDecoder(resp.Body).Decode(collections)
-	fmt.Println(collections)
 
 	currColsMap := make(map[string]Collection)
 
