@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -48,7 +49,89 @@ func readConfig(filename string) (*Config, error) {
 	return config, nil
 }
 
+func mainn() {
+	// Get the current running path
+	binaryDir, err := getCurrRunningPath()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	// Define the file path you want to check
+	configFilePath := filepath.Join(binaryDir, ".letter.config")
+
+	// Check if the file exists
+	_, err = os.Stat(configFilePath)
+	if err == nil {
+		fmt.Println(".letter.config exists in", binaryDir)
+	} else if os.IsNotExist(err) {
+		fmt.Println(".letter.config does not exist in", binaryDir)
+		// Create the file if it doesn't exist
+		err = createConfigFile(configFilePath)
+		if err != nil {
+			fmt.Println("Error creating .letter.config:", err)
+		} else {
+			fmt.Println(".letter.config created in", binaryDir)
+		}
+	} else {
+		fmt.Println("Error checking .letter.config:", err)
+	}
+}
+
+func getCurrRunningPath() (string, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	binaryDir := filepath.Dir(executable)
+
+	return binaryDir, nil
+}
+
 func main() {
+	path, err := getCurrRunningPath()
+	if err != nil {
+		fmt.Println("Unable to get the current running path")
+		return
+	}
+
+	fmt.Println(path)
+}
+
+func createConfigFile(filePath string, content string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	_, err = file.WriteString(content)
+	return err
+}
+
+func getUserInput() (string, string, error) {
+	scanner := bufio.NewScanner(os.Stdin)
+
+	fmt.Print("Enter your API key: ")
+	scanner.Scan()
+	apikey := scanner.Text()
+
+	if scanner.Err() != nil {
+		return "", "", scanner.Err()
+	}
+
+	fmt.Print("Enter your workspace ID: ")
+	scanner.Scan()
+	workspaceid := scanner.Text()
+
+	if scanner.Err() != nil {
+		return "", "", scanner.Err()
+	}
+
+	return apikey, workspaceid, nil
+}
+
+func main1() {
 	apikey := "your api key"
 	workspaceid := "your workspace id"
 	currentDir, err := os.Getwd()

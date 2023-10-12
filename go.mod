@@ -1,4 +1,4 @@
-module letter
+module github.com/debanjanc01/letter
 
 go 1.21.1
 
