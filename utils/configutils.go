@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"gopkg.in/yaml.v2"
 )
@@ -14,13 +13,10 @@ type Config struct {
 	WorkspaceID string `yaml:"workspaceid"`
 }
 
-func GetConfigValues(binaryDir string) (*Config, error) {
-	configFilePath := filepath.Join(binaryDir, ".letter.config")
-
-	// Check if the file exists
+func GetConfigValues(configFilePath string) (*Config, error) {
 	_, err := os.Stat(configFilePath)
 	if err == nil {
-		fmt.Println(".letter.config already exists. Reading the config values from", binaryDir)
+		fmt.Println(".letter.config already exists. Reading the config values from", configFilePath)
 		config, err := readConfig(configFilePath)
 		if err != nil {
 			fmt.Println("Could not read the config values. Make sure the file is correct. Or delete the file and regenerate")
@@ -28,13 +24,13 @@ func GetConfigValues(binaryDir string) (*Config, error) {
 		}
 		return config, nil
 	} else if os.IsNotExist(err) {
-		fmt.Println(".letter.config does not exist in", binaryDir)
-		config, err := createConfigFile(configFilePath)
+		fmt.Println(".letter.config does not exist here", configFilePath)
+		config, err := getConfigFromUser()
 		if err != nil {
 			fmt.Println("Error creating .letter.config:", err)
 			return nil, err
 		} else {
-			fmt.Println(".letter.config created in", binaryDir)
+			fmt.Println("Will create a config with the key", configFilePath)
 			return config, nil
 		}
 	} else {
@@ -44,27 +40,23 @@ func GetConfigValues(binaryDir string) (*Config, error) {
 
 }
 
-func createConfigFile(filePath string) (*Config, error) {
-	config, err := getConfigFromUser()
-	if err != nil {
-		return nil, err
-	}
+func CreateConfigFile(config *Config, filePath string) error {
 	file, err := os.Create(filePath)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer file.Close()
 
 	data, err := yaml.Marshal(&config)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = file.Write(data)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	return config, nil
+	return nil
 }
 
 func getConfigFromUser() (*Config, error) {
@@ -78,17 +70,8 @@ func getConfigFromUser() (*Config, error) {
 		return nil, scanner.Err()
 	}
 
-	fmt.Print("Enter your workspace ID: ")
-	scanner.Scan()
-	workspaceid := scanner.Text()
-
-	if scanner.Err() != nil {
-		return nil, scanner.Err()
-	}
-
 	config := new(Config)
 	config.APIKey = apikey
-	config.WorkspaceID = workspaceid
 
 	return config, nil
 }

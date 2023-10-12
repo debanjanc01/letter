@@ -25,3 +25,13 @@ func ListFilesWithFullPath(directoryPath string) ([]string, error) {
 
 	return files, nil
 }
+
+func GetCurrRunningPath() (string, error) {
+	executable, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	binaryDir := filepath.Dir(executable)
+
+	return binaryDir, nil
+}
